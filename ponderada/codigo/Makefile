@@ -6,11 +6,15 @@
 #   make v3    versão 3, ordem trocada
 #
 # make tsan1 e make tsan2 rodam as versões 1 e 2 no ThreadSanitizer.
+# make extras compila os programas de medição de extras/.
 
 CC = gcc
 CFLAGS = -O2 -g -Wall -Wextra -pthread -ffile-prefix-map="$(CURDIR)"=.
 
-.PHONY: v1 v2 v3 tsan1 tsan2 limpa
+EXTRAS = extras/bin/ritmo extras/bin/custos extras/bin/jitter \
+         extras/bin/latencia_cache extras/bin/parceiro
+
+.PHONY: v1 v2 v3 tsan1 tsan2 extras limpa
 
 v1: versao1
 	./versao1
@@ -33,5 +37,12 @@ versao%: versao%.c comum.h
 versao%_tsan: versao%.c comum.h
 	$(CC) -O1 -g -Wall -Wextra -pthread -fsanitize=thread -ffile-prefix-map="$(CURDIR)"=. -o $@ $<
 
+extras: $(EXTRAS)
+
+extras/bin/%: extras/%.c comum.h
+	@mkdir -p extras/bin
+	$(CC) $(CFLAGS) -o $@ $<
+
 limpa:
 	rm -f versao1 versao2 versao3 versao1_tsan versao2_tsan
+	rm -rf extras/bin
