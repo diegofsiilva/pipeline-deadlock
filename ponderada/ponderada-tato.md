@@ -81,7 +81,11 @@ E a arquitetura Harvard separa instruções e dados. Não existe espera para esc
 
 **Meu computador é Von Neumann, com uma L1 Harvard.** Instruções e dados moram na mesma RAM e no mesmo espaço de endereçamento: tanto que o sistema carrega um programa como dado antes de executá-lo. A separação só existe no último trecho, perto do núcleo, para que buscar instrução e acessar dado não disputem a mesma porta. É o que se chama de Harvard modificada.
 
-<!-- GRAFICO_CACHE -->
+Fui além do print e medi o custo de cada nível (`extras/latencia_cache.c`). É o gargalo de Von Neumann na minha própria máquina:
+
+![Latência de acesso à memória por tamanho dos dados](img/a1_cache.png)
+
+Um acesso à L1 leva 1,2 ns e um acesso à RAM, 101 ns: 84 vezes mais. É a mesma ordem de grandeza da penalidade de 120 ciclos do enunciado, e é por isso que a taxa de falta manda na Plataforma V.
 
 ### Até onde essa resposta aguenta
 
@@ -257,7 +261,156 @@ Uso os estados da aula e do Machado e Maia (cap. 5):
 
 Medi uma tarefa com esse perfil por 30 s, usando as contas `nvcsw` e `nivcsw` do PCB que aparecem no slide: 92% do tempo fora do processador, 3.000 saídas por conta própria e só 33 retiradas pelo sistema. É um processo I/O-bound de manual.
 
-<!-- A4 -->
+## A4. Código com semáforos: o buffer entre o sensor e o motor
+
+Fiz em **C com pthreads**, a linguagem em que esse firmware seria escrito. Sem GIL, as duas threads rodam ao mesmo tempo em núcleos diferentes, e a corrida acontece de verdade. Cada versão roda com um comando, a partir de `ponderada/codigo`: `make v1`, `make v2` e `make v3`.
+
+As três usam o mesmo `comum.h`, com a contabilidade, o vigia de 1 s e o relatório, para que a única diferença entre elas seja a sincronização. No código, a versão 3 é a versão 2 com duas linhas trocadas de lugar. `sem_wait` é o DOWN (P) e `sem_post` é o UP (V).
+
+### Resultados das 9 execuções
+
+N = 3 e 20.000 amostras. São as primeiras 9 execuções do script, sem seleção (`resultados/execucoes.txt`).
+
+| Versão | Execução | Produzidas | Consumidas | Perdidas | Duplicadas | Travou? |
+|---|---:|---:|---:|---:|---:|---|
+| 1 | 1 | 19.016 | 20.000 | 3.648 | 3.648 | não |
+| 1 | 2 | 10.295 | 20.000 | 10.090 | 10.090 | não |
+| 1 | 3 | 20.000 | 12.558 | 8.306 | 864 | sim |
+| 2 | 1 | 20.000 | 20.000 | 0 | 0 | não |
+| 2 | 2 | 20.000 | 20.000 | 0 | 0 | não |
+| 2 | 3 | 20.000 | 20.000 | 0 | 0 | não |
+| 3 | 1 | 3 | 0 | 20.000 | 0 | sim |
+| 3 | 2 | 3 | 0 | 20.000 | 0 | sim |
+| 3 | 3 | 3 | 0 | 20.000 | 0 | sim |
+
+Perdida é um número de 0 a 19.999 que o consumidor nunca viu. Duplicada é cada recebimento além do primeiro. A coluna **Produzidas** é um acréscimo meu, porque parte das perdidas nem chegou a existir: na execução 2 da versão 1, o consumidor "completou" 20.000 leituras com o sensor ainda na amostra 10.295.
+
+Duas das três execuções da versão 1 terminaram sem travar e com 20.000 recebimentos. Quem olhasse só para isso diria que estão corretas, mas 18% e 50% dos recebimentos eram repetição.
+
+**Versão 1**
+
+![Print de uma execução da versão 1](img/a4_v1.png)
+
+**Versão 2**
+
+![Print de uma execução da versão 2](img/a4_v2.png)
+
+**Versão 3**
+
+![Print de uma execução da versão 3](img/a4_v3.png)
+
+### Versão 1: a região crítica
+
+A região crítica é o trecho que testa e altera o estado compartilhado: o teste de `ocupadas`, o acesso à posição do buffer e, principalmente, o par `lido = ocupadas` e `ocupadas = lido ± 1`. Se a outra thread entra entre a leitura e a escrita, o valor gravado sai de uma leitura velha e a atualização dela some. É o LOAD, ADD e STORE da aula, agora nas duas direções.
+
+```c
+int lido = ocupadas;     /* ler */
+sched_yield();           /* a outra thread pode entrar aqui */
+ocupadas = lido + 1;     /* escrever um valor que pode já estar velho */
+```
+
+**Por que duplica.** Partindo de `ocupadas = 1`, o decremento do consumidor é perdido e o contador fica **acima** da realidade:
+
+| Passo | Thread | Instrução | `ocupadas` | Não lidas de verdade |
+|---:|---|---|---:|---:|
+| 1 | Produtor | grava a amostra; `lido = ocupadas` (1) | 1 | 2 |
+| 2 | Consumidor | lê a amostra; `lido = ocupadas` (1) | 1 | 1 |
+| 3 | Consumidor | `ocupadas = lido - 1` | 0 | 1 |
+| 4 | Produtor | `ocupadas = lido + 1` | **2** | 1 |
+
+O contador diz 2, mas só existe uma amostra nova. O consumidor lê essa amostra e, ainda vendo `ocupadas = 1`, avança para uma posição antiga e lê de novo o que já tinha lido.
+
+**Por que perde.** Agora o incremento do produtor é perdido e o contador fica **abaixo** da realidade:
+
+| Passo | Thread | Instrução | `ocupadas` | Não lidas de verdade |
+|---:|---|---|---:|---:|
+| 1 | Consumidor | lê a amostra; `lido = ocupadas` (1) | 1 | 0 |
+| 2 | Produtor | grava a amostra; `lido = ocupadas` (1) | 1 | 1 |
+| 3 | Produtor | `ocupadas = lido + 1` | 2 | 1 |
+| 4 | Consumidor | `ocupadas = lido - 1` | **0** | 1 |
+
+O contador diz que o buffer está vazio, mas há uma amostra por ler. O produtor acredita ter 3 posições livres, dá a volta no buffer e, se o consumidor demorar, grava por cima dela. Se o contador terminar assim, depois que o produtor acabar, o consumidor fica esperando amostras que não virão, e o vigia registra o travamento.
+
+**Evidência independente.** O ThreadSanitizer acompanha cada acesso à memória e aponta exatamente essas variáveis: `ocupadas` (linhas 43, 64 e 72 de `versao1.c`) e `buffer` (linhas 38 e 67). O terceiro aviso é a atualização perdida em pessoa: as duas threads escrevendo no mesmo contador, nas linhas 43 e 72. Na versão 2, ele não encontra nenhuma corrida.
+
+![Relatório do ThreadSanitizer na versão 1](img/a4_tsan.png)
+
+### Três execuções não provam nada
+
+Repeti cada versão muitas vezes, em vários núcleos e presa a um só:
+
+| Cenário | Execuções | Sem erro | Travaram | Perdidas (mín. a máx.) | Duplicadas (mín. a máx.) | Tempo mediano |
+|---|---:|---:|---:|---:|---:|---:|
+| Versão 1, vários núcleos | 200 | 0 | 89 | 1.398 a 13.238 | 7 a 13.238 | 0,012 s |
+| Versão 1, um núcleo | 20 | 11 | 5 | 0 a 117 | 0 a 6 | 29,7 s |
+| Versão 2, vários núcleos | 200 | 200 | 0 | 0 | 0 | 0,036 s |
+| Versão 2, um núcleo | 20 | 20 | 0 | 0 | 0 | 0,033 s |
+| Versão 3, vários núcleos | 100 | 0 | 100 | 20.000 | 0 | 1,001 s |
+| Versão 3, um núcleo | 20 | 0 | 20 | 20.000 | 0 | 1,000 s |
+
+![Amostras perdidas em cada execução, por versão](img/a4_campanha.png)
+
+A versão 2 nunca errou e a versão 3 nunca escapou. O problema é a versão 1: em vários núcleos, nenhuma das 200 execuções saiu certa, e as perdas foram de 1.398 a 13.238.
+
+Presa a um núcleo, como em uma pulseira com um processador só, ela erra bem menos: 11 das 20 execuções saíram perfeitas. Com essa taxa, três execuções limpas seguidas acontecem em uma de cada seis tentativas, e foi o que aconteceu comigo. Minhas três primeiras nesse cenário não mostraram erro nenhum, e eu quase escrevi que o código funcionava em um núcleo. É a armadilha do slide, "o teste passou, então não tem condição de corrida". A corrida continua lá, só ficou mais rara.
+
+O núcleo único cobra outra conta. Quem gira na espera ocupada gasta o tempo de quem tem trabalho a fazer: a versão 1 levou 29,7 s, contra 0,033 s da versão 2, mais de 900 vezes mais. São 1,5 ms por amostra, 30% do orçamento de 5 ms, gastos em um laço vazio.
+
+### Versão 2: o que cada semáforo garante
+
+| Semáforo | Começa em | O que garante |
+|---|---:|---|
+| `vazio` | N = 3 | O produtor nunca grava em uma posição ainda não lida: com o buffer cheio, ele dorme. Elimina as perdas. |
+| `cheio` | 0 | O consumidor nunca lê uma posição sem amostra nova: com o buffer vazio, ele dorme, sem gastar CPU. Elimina as duplicadas. |
+| `mutex` | 1 | Exclusão mútua: só uma thread por vez mexe no buffer e nos índices. |
+
+Testes mostram que a versão 2 funcionou. Para mostrar que ela não pode travar, o `verificador.py` percorreu todos os estados alcançáveis: **38 estados e nenhum deadlock**, em qualquer intercalação. O mesmo vale para os outros tamanhos que testei, até N = 64.
+
+Um detalhe que encontrei ao testar: com **um** produtor e **um** consumidor, `vazio` e `cheio` já mantêm as duas threads em posições diferentes. Tirei o `mutex` de uma cópia da versão 2 e, em 200 execuções e no ThreadSanitizer, não houve nenhum erro. Com duas threads de um mesmo lado, ele volta a ser indispensável, porque elas dividiriam o índice. Neste caso, o semáforo que causa o deadlock da versão 3 poderia nem existir.
+
+### Versão 3: o que aconteceu
+
+Esta é a diferença entre as duas versões, além do título e dos comentários:
+
+```diff
+-        sem_wait(&vazio);
+         sem_wait(&mutex);
++        sem_wait(&vazio);
+```
+
+**Deadlock, em todas as execuções.** O relatório já conta a história nos valores finais, `vazio=0 cheio=2 mutex=0`:
+
+1. O produtor enche as 3 posições e `vazio` chega a 0.
+2. Na quarta amostra, ele faz DOWN(mutex), consegue, e dorme em DOWN(vazio) **segurando o mutex**.
+3. O consumidor faz DOWN(cheio), que cai de 3 para 2, e dorme em DOWN(mutex).
+4. Só o consumidor pode fazer UP(vazio), mas ele está antes desse ponto, preso no mutex. Só o produtor pode fazer UP(mutex), mas ele está preso em `vazio`.
+
+O gdb confirma, com as duas threads paradas no momento em que o vigia dispara: o consumidor dorme em `<mutex>` (`versao3.c:63`) e o produtor, em `<vazio>` (`versao3.c:36`).
+
+![Pilhas das threads no gdb durante o deadlock da versão 3](img/a4_gdb.png)
+
+É o mesmo defeito da A5, com um detalhe que engana: as duas threads estão dormindo, sem gastar CPU. Um deadlock não aparece como carga alta nem como erro. É silêncio, e por isso o vigia olha para o progresso.
+
+**Aumentar o buffer não resolve.** O verificador encontra o deadlock em todos os tamanhos testados, até N = 64. Um buffer maior só aumenta o caminho até ele, que tem 4N + 2 passos.
+
+### O ritmo real esconde o defeito
+
+Na versão 3, 100% de travamento pareceu fácil demais. O motivo é que as versões correm na velocidade máxima, e o produtor enche o buffer antes de o consumidor começar. Na pulseira, o sensor gera uma amostra a cada 10 ms. Por isso, `extras/ritmo.c` roda o mesmo buffer a 100 Hz, com o motor levando 0,8 ms por amostra e uma pausa opcional:
+
+| Cenário a 100 Hz | Consumidas | Travou? | Latência máxima | Acima de 5 ms |
+|---|---:|---|---:|---:|
+| Versão 3, sem pausa | 20.000 | não | 3,99 ms | 0 |
+| Versão 3, pausa de 20 ms no motor | 20.000 | não | 20,98 ms | 2 |
+| Versão 3, pausa de 50 ms no motor | 1.001 | **sim** | 50,95 ms | 1 |
+| Versão 2, pausa de 50 ms no motor | 20.000 | não | 51,04 ms | 5 |
+
+Este é o resultado mais importante da A4. **No ritmo real, a versão 3 passa 200 s de teste sem travar**, porque o buffer quase nunca enche. Basta uma pausa do motor longa o bastante para acumular 3 amostras e chegar a quarta, entre 30 e 40 ms pela conta, para a pulseira congelar para sempre. Com a mesma pausa, a versão 2 atrasa 5 amostras e volta ao normal sozinha.
+
+É assim que um defeito desses chega ao cliente: ele precisa de um azar raro, e o efeito é permanente.
+
+### O que N = 3 custa em prazo
+
+Buffer maior não é só mais seguro. Se o processamento roda depois do buffer e ele está cheio, a última amostra espera as outras e leva N × tempo por amostra para ficar pronta. Com N = 3, só a H com DSP cabe nos 5 ms (tabela da A1): a H leva 9,375 ms e a V, 5,395 ms no pior caso. **Um buffer troca perda por atraso**, e em um aviso de obstáculo uma amostra velha vale pouco.
 
 ## A5. Deadlock: a pulseira congelou
 
