@@ -85,7 +85,7 @@ Fui além do print e medi o custo de cada nível (`extras/latencia_cache.c`). É
 
 ![Latência de acesso à memória por tamanho dos dados](img/a1_cache.png)
 
-Um acesso à L1 leva 1,2 ns e um acesso à RAM, 101 ns: 84 vezes mais. É a mesma ordem de grandeza da penalidade de 120 ciclos do enunciado, e é por isso que a taxa de falta manda na Plataforma V.
+Um acesso à L1 leva 1,21 ns e um acesso à RAM, 101,5 ns: 84 vezes mais. É a mesma ordem de grandeza da penalidade de 120 ciclos do enunciado, e é por isso que a taxa de falta manda na Plataforma V.
 
 ### Até onde essa resposta aguenta
 
@@ -127,30 +127,34 @@ A segunda linha da tabela também pesa. Só de dividir o processador com um proc
 
 ## A2. Pipeline: o loop do filtro
 
-Numero as instruções de I1 a I7, na ordem do enunciado. Os diagramas abaixo foram gerados por `extras/pipeline.py`. O asterisco marca um ciclo parado naquele estágio.
+Numero as instruções na ordem do enunciado:
+
+```text
+I1  lw   x5, 0(x10)
+I2  add  x6, x6, x5
+I3  lw   x7, 0(x11)
+I4  sub  x6, x6, x7
+I5  sw   x6, 0(x12)
+I6  addi x10, x10, 4
+I7  addi x11, x11, 4
+```
+
+Os diagramas vêm do simulador `extras/pipeline.py` e usam a mesma escala de 17 ciclos, para o ganho aparecer no desenho. Em laranja estão os ciclos em que a instrução fica parada naquele estágio.
 
 ### 1. Dependências de dados (RAW)
 
 | Instrução | Depende de | Registrador | Distância |
-|---|---|---|---|
-| I2 `add x6, x6, x5` | I1 `lw x5, 0(x10)` | x5 | 1 |
-| I4 `sub x6, x6, x7` | I2 `add x6, x6, x5` | x6 | 2 |
-| I4 `sub x6, x6, x7` | I3 `lw x7, 0(x11)` | x7 | 1 |
-| I5 `sw x6, 0(x12)` | I4 `sub x6, x6, x7` | x6 | 1 |
+|---|---|---|---:|
+| I2 `add` | I1 `lw` | x5 | 1 |
+| I4 `sub` | I2 `add` | x6 | 2 |
+| I4 `sub` | I3 `lw` | x7 | 1 |
+| I5 `sw` | I4 `sub` | x6 | 1 |
 
 ### 2. Sem forwarding: 17 ciclos
 
 Quem lê precisa esperar o WB de quem escreve. Como o banco escreve na primeira metade do ciclo e lê na segunda, ID e WB podem cair no mesmo ciclo.
 
-| Instrução | 1 | 2 | 3 | 4 | 5 | 6 | 7 | 8 | 9 | 10 | 11 | 12 | 13 | 14 | 15 | 16 | 17 |
-|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|
-| `lw x5, 0(x10)` | IF | ID | EX | MEM | WB |  |  |  |  |  |  |  |  |  |  |  |  |
-| `add x6, x6, x5` |  | IF | ID\* | ID\* | ID | EX | MEM | WB |  |  |  |  |  |  |  |  |  |
-| `lw x7, 0(x11)` |  |  | IF\* | IF\* | IF | ID | EX | MEM | WB |  |  |  |  |  |  |  |  |
-| `sub x6, x6, x7` |  |  |  |  |  | IF | ID\* | ID\* | ID | EX | MEM | WB |  |  |  |  |  |
-| `sw x6, 0(x12)` |  |  |  |  |  |  | IF\* | IF\* | IF | ID\* | ID\* | ID | EX | MEM | WB |  |  |
-| `addi x10, x10, 4` |  |  |  |  |  |  |  |  |  | IF\* | IF\* | IF | ID | EX | MEM | WB |  |
-| `addi x11, x11, 4` |  |  |  |  |  |  |  |  |  |  |  |  | IF | ID | EX | MEM | WB |
+![Diagrama de pipeline sem forwarding: 17 ciclos e 6 bolhas](img/a2_sem_forwarding.png)
 
 ```text
 Total = 7 instruções + 4 ciclos para esvaziar + 6 bolhas = 17 ciclos
@@ -160,15 +164,7 @@ As 6 bolhas vêm de I1→I2, I3→I4 e I4→I5, com 2 cada. A dependência I2→
 
 ### 3. Com forwarding: 13 ciclos
 
-| Instrução | 1 | 2 | 3 | 4 | 5 | 6 | 7 | 8 | 9 | 10 | 11 | 12 | 13 |
-|---|---|---|---|---|---|---|---|---|---|---|---|---|---|
-| `lw x5, 0(x10)` | IF | ID | EX | MEM | WB |  |  |  |  |  |  |  |  |
-| `add x6, x6, x5` |  | IF | ID\* | ID | EX | MEM | WB |  |  |  |  |  |  |
-| `lw x7, 0(x11)` |  |  | IF\* | IF | ID | EX | MEM | WB |  |  |  |  |  |
-| `sub x6, x6, x7` |  |  |  |  | IF | ID\* | ID | EX | MEM | WB |  |  |  |
-| `sw x6, 0(x12)` |  |  |  |  |  | IF\* | IF | ID | EX | MEM | WB |  |  |
-| `addi x10, x10, 4` |  |  |  |  |  |  |  | IF | ID | EX | MEM | WB |  |
-| `addi x11, x11, 4` |  |  |  |  |  |  |  |  | IF | ID | EX | MEM | WB |
+![Diagrama de pipeline com forwarding: 13 ciclos e 2 bolhas](img/a2_com_forwarding.png)
 
 ```text
 Total = 7 + 4 + 2 bolhas = 13 ciclos
@@ -190,15 +186,7 @@ addi x10, x10, 4
 addi x11, x11, 4
 ```
 
-| Instrução | 1 | 2 | 3 | 4 | 5 | 6 | 7 | 8 | 9 | 10 | 11 |
-|---|---|---|---|---|---|---|---|---|---|---|---|
-| `lw x5, 0(x10)` | IF | ID | EX | MEM | WB |  |  |  |  |  |  |
-| `lw x7, 0(x11)` |  | IF | ID | EX | MEM | WB |  |  |  |  |  |
-| `add x6, x6, x5` |  |  | IF | ID | EX | MEM | WB |  |  |  |  |
-| `sub x6, x6, x7` |  |  |  | IF | ID | EX | MEM | WB |  |  |  |
-| `sw x6, 0(x12)` |  |  |  |  | IF | ID | EX | MEM | WB |  |  |
-| `addi x10, x10, 4` |  |  |  |  |  | IF | ID | EX | MEM | WB |  |
-| `addi x11, x11, 4` |  |  |  |  |  |  | IF | ID | EX | MEM | WB |
+![Diagrama de pipeline reordenado: 11 ciclos e nenhuma bolha](img/a2_reordenado.png)
 
 ```text
 Total = 7 + 4 + 0 bolhas = 11 ciclos, o mínimo para 7 instruções em 5 estágios
@@ -289,15 +277,15 @@ Duas das três execuções da versão 1 terminaram sem travar e com 20.000 receb
 
 **Versão 1**
 
-![Print de uma execução da versão 1](img/a4_v1.png)
+<img src="img/a4_v1.png" alt="Print de uma execução da versão 1" width="560">
 
 **Versão 2**
 
-![Print de uma execução da versão 2](img/a4_v2.png)
+<img src="img/a4_v2.png" alt="Print de uma execução da versão 2" width="560">
 
 **Versão 3**
 
-![Print de uma execução da versão 3](img/a4_v3.png)
+<img src="img/a4_v3.png" alt="Print de uma execução da versão 3" width="560">
 
 ### Versão 1: a região crítica
 
