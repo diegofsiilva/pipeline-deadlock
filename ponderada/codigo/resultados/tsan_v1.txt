@@ -1,0 +1,70 @@
+TSAN_OPTIONS=report_thread_leaks=0 ./versao1_tsan
+==================
+WARNING: ThreadSanitizer: data race (pid=143185)
+  Read of size 4 at 0x555555558040 by thread T2:
+    #0 consumidor versao1.c:64 (versao1_tsan+0x1329) (BuildId: f6acadf2aca99b474f4ba52d2caef30716b0dfb7)
+
+  Previous write of size 4 at 0x555555558040 by thread T1:
+    #0 produtor versao1.c:43 (versao1_tsan+0x14c1) (BuildId: f6acadf2aca99b474f4ba52d2caef30716b0dfb7)
+
+  Location is global 'ocupadas' of size 4 at 0x555555558040 (versao1_tsan+0x4040)
+
+  Thread T2 (tid=143188, running) created by main thread at:
+    #0 pthread_create ../../../../src/libsanitizer/tsan/tsan_interceptors_posix.cpp:1078 (libtsan.so.2+0x5cb02) (BuildId: 66d37dc704b813df6c813b77217284deb43a0042)
+    #1 main versao1.c:93 (versao1_tsan+0x160b) (BuildId: f6acadf2aca99b474f4ba52d2caef30716b0dfb7)
+
+  Thread T1 (tid=143187, running) created by main thread at:
+    #0 pthread_create ../../../../src/libsanitizer/tsan/tsan_interceptors_posix.cpp:1078 (libtsan.so.2+0x5cb02) (BuildId: 66d37dc704b813df6c813b77217284deb43a0042)
+    #1 main versao1.c:92 (versao1_tsan+0x15f0) (BuildId: f6acadf2aca99b474f4ba52d2caef30716b0dfb7)
+
+SUMMARY: ThreadSanitizer: data race versao1.c:64 in consumidor
+==================
+==================
+WARNING: ThreadSanitizer: data race (pid=143185)
+  Read of size 4 at 0x55555556b8f0 by thread T2:
+    #0 consumidor versao1.c:67 (versao1_tsan+0x1352) (BuildId: f6acadf2aca99b474f4ba52d2caef30716b0dfb7)
+
+  Previous write of size 4 at 0x55555556b8f0 by thread T1:
+    #0 produtor versao1.c:38 (versao1_tsan+0x1474) (BuildId: f6acadf2aca99b474f4ba52d2caef30716b0dfb7)
+
+  Location is global 'buffer' of size 12 at 0x55555556b8f0 (versao1_tsan+0x178f0)
+
+  Thread T2 (tid=143188, running) created by main thread at:
+    #0 pthread_create ../../../../src/libsanitizer/tsan/tsan_interceptors_posix.cpp:1078 (libtsan.so.2+0x5cb02) (BuildId: 66d37dc704b813df6c813b77217284deb43a0042)
+    #1 main versao1.c:93 (versao1_tsan+0x160b) (BuildId: f6acadf2aca99b474f4ba52d2caef30716b0dfb7)
+
+  Thread T1 (tid=143187, running) created by main thread at:
+    #0 pthread_create ../../../../src/libsanitizer/tsan/tsan_interceptors_posix.cpp:1078 (libtsan.so.2+0x5cb02) (BuildId: 66d37dc704b813df6c813b77217284deb43a0042)
+    #1 main versao1.c:92 (versao1_tsan+0x15f0) (BuildId: f6acadf2aca99b474f4ba52d2caef30716b0dfb7)
+
+SUMMARY: ThreadSanitizer: data race versao1.c:67 in consumidor
+==================
+==================
+WARNING: ThreadSanitizer: data race (pid=143185)
+  Write of size 4 at 0x555555558040 by thread T1:
+    #0 produtor versao1.c:43 (versao1_tsan+0x14c1) (BuildId: f6acadf2aca99b474f4ba52d2caef30716b0dfb7)
+
+  Previous write of size 4 at 0x555555558040 by thread T2:
+    #0 consumidor versao1.c:72 (versao1_tsan+0x13a9) (BuildId: f6acadf2aca99b474f4ba52d2caef30716b0dfb7)
+
+  Location is global 'ocupadas' of size 4 at 0x555555558040 (versao1_tsan+0x4040)
+
+  Thread T1 (tid=143187, running) created by main thread at:
+    #0 pthread_create ../../../../src/libsanitizer/tsan/tsan_interceptors_posix.cpp:1078 (libtsan.so.2+0x5cb02) (BuildId: 66d37dc704b813df6c813b77217284deb43a0042)
+    #1 main versao1.c:92 (versao1_tsan+0x15f0) (BuildId: f6acadf2aca99b474f4ba52d2caef30716b0dfb7)
+
+  Thread T2 (tid=143188, running) created by main thread at:
+    #0 pthread_create ../../../../src/libsanitizer/tsan/tsan_interceptors_posix.cpp:1078 (libtsan.so.2+0x5cb02) (BuildId: 66d37dc704b813df6c813b77217284deb43a0042)
+    #1 main versao1.c:93 (versao1_tsan+0x160b) (BuildId: f6acadf2aca99b474f4ba52d2caef30716b0dfb7)
+
+SUMMARY: ThreadSanitizer: data race versao1.c:43 in produtor
+==================
+ThreadSanitizer: reported 3 warnings
+Versão 1, sem sincronização (N = 3, 20000 amostras)
+  produzidas : 19443
+  consumidas : 20000
+  perdidas   : 8699
+  duplicadas : 8699
+  travou     : não
+  tempo      : 2.866 s
+make: [Makefile:29: tsan1] Error 66 (ignorado)

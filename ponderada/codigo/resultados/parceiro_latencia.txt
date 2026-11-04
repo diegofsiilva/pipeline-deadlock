@@ -1,0 +1,4 @@
+  mediana       p99    máximo   arranjo (microssegundos)
+      1.1      12.8    1164.1   thread, memória direta
+      1.2      14.1     149.4   processo, memória só de leitura
+      1.2      17.1     226.8   processo, pipe

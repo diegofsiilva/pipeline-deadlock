@@ -1,0 +1,87 @@
+--- versão 1, execução 1
+./versao1
+Versão 1, sem sincronização (N = 3, 20000 amostras)
+  produzidas : 19016
+  consumidas : 20000
+  perdidas   : 3648
+  duplicadas : 3648
+  travou     : não
+  tempo      : 0.012 s
+--- versão 1, execução 2
+./versao1
+Versão 1, sem sincronização (N = 3, 20000 amostras)
+  produzidas : 10295
+  consumidas : 20000
+  perdidas   : 10090
+  duplicadas : 10090
+  travou     : não
+  tempo      : 0.007 s
+--- versão 1, execução 3
+./versao1
+Versão 1, sem sincronização (N = 3, 20000 amostras)
+  produzidas : 20000
+  consumidas : 12558
+  perdidas   : 8306
+  duplicadas : 864
+  travou     : sim
+  tempo      : 1.010 s
+--- versão 2, execução 1
+./versao2
+Versão 2, com semáforos (N = 3, 20000 amostras)
+  produzidas : 20000
+  consumidas : 20000
+  perdidas   : 0
+  duplicadas : 0
+  travou     : não
+  tempo      : 0.033 s
+  semáforos  : vazio=3 cheio=0 mutex=1
+--- versão 2, execução 2
+./versao2
+Versão 2, com semáforos (N = 3, 20000 amostras)
+  produzidas : 20000
+  consumidas : 20000
+  perdidas   : 0
+  duplicadas : 0
+  travou     : não
+  tempo      : 0.028 s
+  semáforos  : vazio=3 cheio=0 mutex=1
+--- versão 2, execução 3
+./versao2
+Versão 2, com semáforos (N = 3, 20000 amostras)
+  produzidas : 20000
+  consumidas : 20000
+  perdidas   : 0
+  duplicadas : 0
+  travou     : não
+  tempo      : 0.035 s
+  semáforos  : vazio=3 cheio=0 mutex=1
+--- versão 3, execução 1
+./versao3
+Versão 3, ordem trocada (N = 3, 20000 amostras)
+  produzidas : 3
+  consumidas : 0
+  perdidas   : 20000
+  duplicadas : 0
+  travou     : sim
+  tempo      : 1.001 s
+  semáforos  : vazio=0 cheio=2 mutex=0
+--- versão 3, execução 2
+./versao3
+Versão 3, ordem trocada (N = 3, 20000 amostras)
+  produzidas : 3
+  consumidas : 0
+  perdidas   : 20000
+  duplicadas : 0
+  travou     : sim
+  tempo      : 1.001 s
+  semáforos  : vazio=0 cheio=2 mutex=0
+--- versão 3, execução 3
+./versao3
+Versão 3, ordem trocada (N = 3, 20000 amostras)
+  produzidas : 3
+  consumidas : 0
+  perdidas   : 20000
+  duplicadas : 0
+  travou     : sim
+  tempo      : 1.001 s
+  semáforos  : vazio=0 cheio=2 mutex=0

@@ -1,0 +1,10 @@
+Pausa do motor: 0 ms na amostra 1000
+Versão 3 a 100 Hz (N = 3, 20000 amostras)
+  produzidas : 20000
+  consumidas : 20000
+  perdidas   : 0
+  duplicadas : 0
+  travou     : não
+  tempo      : 199.991 s
+  latência máxima : 3.99 ms
+  acima de 5 ms   : 0 amostras

@@ -1,0 +1,38 @@
+Ponto de parada 1 at 0x12c0: file ./comum.h, line 129.
+[Thread debugging using libthread_db enabled]
+Using host libthread_db library "/usr/lib/x86_64-linux-gnu/libthread_db.so.1".
+[New Thread 0x7ffff7bff6c0 (LWP 143208)]
+[New Thread 0x7ffff73fe6c0 (LWP 143209)]
+
+Thread 1 "versao3" hit Breakpoint 1, relatorio (titulo=0x55555555600d "Versão 3, ordem trocada", travou=true, segundos=1.0006940009998289) at ./comum.h:129
+129	        if (vezes_recebida[i] > 0)
+
+Thread 3 (Thread 0x7ffff73fe6c0 (LWP 143209) "versao3"):
+#0  __syscall_cancel_arch () at ../sysdeps/unix/sysv/linux/x86_64/syscall_cancel.S:56
+#1  0x00007ffff7ca030c in __internal_syscall_cancel (a1=a1@entry=93824992247872, a2=<optimized out>, a3=a3@entry=0, a4=a4@entry=0, a5=a5@entry=0, a6=a6@entry=4294967295, nr=202) at ./nptl/cancellation.c:49
+#2  0x00007ffff7ca06e7 in __futex_abstimed_wait_common64 (private=<optimized out>, futex_word=0x555555558040 <mutex>, expected=0, op=<optimized out>, abstime=0x0, cancel=true) at ./nptl/futex-internal.c:57
+#3  __futex_abstimed_wait_common (futex_word=0x555555558040 <mutex>, expected=0, clockid=0, abstime=0x0, private=<optimized out>, cancel=true) at ./nptl/futex-internal.c:87
+#4  __GI___futex_abstimed_wait_cancelable64 (futex_word=futex_word@entry=0x555555558040 <mutex>, expected=expected@entry=0, clockid=clockid@entry=0, abstime=abstime@entry=0x0, private=<optimized out>) at ./nptl/futex-internal.c:139
+#5  0x00007ffff7cac66f in do_futex_wait (sem=sem@entry=0x555555558040 <mutex>, abstime=0x0, clockid=0) at ./nptl/sem_waitcommon.c:111
+#6  0x00007ffff7cac708 in __new_sem_wait_slow64 (sem=sem@entry=0x555555558040 <mutex>, abstime=0x0, clockid=0) at ./nptl/sem_waitcommon.c:183
+#7  0x00007ffff7cac78d in __new_sem_wait (sem=sem@entry=0x555555558040 <mutex>) at ./nptl/sem_wait.c:42
+#8  0x0000555555555578 in consumidor (arg=<optimized out>) at ./versao3.c:63
+#9  0x00007ffff7ca3dfa in start_thread (arg=<optimized out>) at ./nptl/pthread_create.c:454
+#10 0x00007ffff7d375cc in __GI___clone3 () at ../sysdeps/unix/sysv/linux/x86_64/clone3.S:78
+
+Thread 2 (Thread 0x7ffff7bff6c0 (LWP 143208) "versao3"):
+#0  __syscall_cancel_arch () at ../sysdeps/unix/sysv/linux/x86_64/syscall_cancel.S:56
+#1  0x00007ffff7ca030c in __internal_syscall_cancel (a1=a1@entry=93824992247936, a2=<optimized out>, a3=a3@entry=0, a4=a4@entry=0, a5=a5@entry=0, a6=a6@entry=4294967295, nr=202) at ./nptl/cancellation.c:49
+#2  0x00007ffff7ca06e7 in __futex_abstimed_wait_common64 (private=<optimized out>, futex_word=0x555555558080 <vazio>, expected=0, op=<optimized out>, abstime=0x0, cancel=true) at ./nptl/futex-internal.c:57
+#3  __futex_abstimed_wait_common (futex_word=0x555555558080 <vazio>, expected=0, clockid=0, abstime=0x0, private=<optimized out>, cancel=true) at ./nptl/futex-internal.c:87
+#4  __GI___futex_abstimed_wait_cancelable64 (futex_word=futex_word@entry=0x555555558080 <vazio>, expected=expected@entry=0, clockid=clockid@entry=0, abstime=abstime@entry=0x0, private=<optimized out>) at ./nptl/futex-internal.c:139
+#5  0x00007ffff7cac66f in do_futex_wait (sem=sem@entry=0x555555558080 <vazio>, abstime=0x0, clockid=0) at ./nptl/sem_waitcommon.c:111
+#6  0x00007ffff7cac708 in __new_sem_wait_slow64 (sem=sem@entry=0x555555558080 <vazio>, abstime=0x0, clockid=0) at ./nptl/sem_waitcommon.c:183
+#7  0x00007ffff7cac78d in __new_sem_wait (sem=sem@entry=0x555555558080 <vazio>) at ./nptl/sem_wait.c:42
+#8  0x0000555555555628 in produtor (arg=<optimized out>) at ./versao3.c:36
+#9  0x00007ffff7ca3dfa in start_thread (arg=<optimized out>) at ./nptl/pthread_create.c:454
+#10 0x00007ffff7d375cc in __GI___clone3 () at ../sysdeps/unix/sysv/linux/x86_64/clone3.S:78
+
+Thread 1 (Thread 0x7ffff7fa1740 (LWP 143205) "versao3"):
+#0  relatorio (titulo=0x55555555600d "Versão 3, ordem trocada", travou=true, segundos=1.0006940009998289) at ./comum.h:129
+#1  main () at ./versao3.c:115

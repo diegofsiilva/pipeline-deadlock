@@ -1,0 +1,8 @@
+módulo: mprotect recusado: Permission denied
+modo         motor no prazo  falsas   falha: como terminou
+thread     100/300      100       0   acesso indevido: Segmentation fault
+processo   300/300      300       0   acesso indevido: terminou normalmente (módulo morto: Segmentation fault)
+thread     300/300      300     200   escreve na amostra: terminou normalmente
+processo   300/300      300       0   escreve na amostra: terminou normalmente (módulo morto: Segmentation fault)
+thread     100/300      100       0   segura a trava: congelou
+processo   300/300      300       0   segura a trava: terminou normalmente

@@ -1,0 +1,40 @@
+--- ociosa
+amostras            : 3000
+atraso mediano      : 57 us
+atraso p99          : 601 us
+atraso máximo       : 2682 us
+acima de 1,2 ms     : 5
+acima de 3 ms       : 0
+saiu por conta      : 3000 (nvcsw)
+tirada pelo sistema : 33 (nivcsw)
+fora do processador : 91.8% do tempo
+--- concorrente normal no mesmo núcleo
+amostras            : 3000
+atraso mediano      : 629 us
+atraso p99          : 639 us
+atraso máximo       : 2630 us
+acima de 1,2 ms     : 1
+acima de 3 ms       : 0
+saiu por conta      : 3000 (nvcsw)
+tirada pelo sistema : 2 (nivcsw)
+fora do processador : 92.0% do tempo
+--- concorrente SCHED_IDLE no mesmo núcleo
+amostras            : 3000
+atraso mediano      : 54 us
+atraso p99          : 62 us
+atraso máximo       : 1303 us
+acima de 1,2 ms     : 1
+acima de 3 ms       : 0
+saiu por conta      : 3000 (nvcsw)
+tirada pelo sistema : 6 (nivcsw)
+fora do processador : 92.0% do tempo
+--- todos os núcleos ocupados
+amostras            : 3000
+atraso mediano      : 86 us
+atraso p99          : 3295 us
+atraso máximo       : 8134 us
+acima de 1,2 ms     : 188
+acima de 3 ms       : 79
+saiu por conta      : 3000 (nvcsw)
+tirada pelo sistema : 84 (nivcsw)
+fora do processador : 92.0% do tempo

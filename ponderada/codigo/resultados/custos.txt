@@ -1,0 +1,5 @@
+      9.55 us  criar thread (pthread_create)
+     55.74 us  criar processo (fork)
+    220.85 us  criar processo com outro programa (spawn)
+      0.94 us  trocar entre threads (pipe, mesmo núcleo)
+      1.01 us  trocar entre processos (pipe, mesmo núcleo)

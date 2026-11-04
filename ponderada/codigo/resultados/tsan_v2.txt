@@ -1,0 +1,9 @@
+TSAN_OPTIONS=report_thread_leaks=0 ./versao2_tsan
+Versão 2, com semáforos (N = 3, 20000 amostras)
+  produzidas : 20000
+  consumidas : 20000
+  perdidas   : 0
+  duplicadas : 0
+  travou     : não
+  tempo      : 0.036 s
+  semáforos  : vazio=3 cheio=0 mutex=1
