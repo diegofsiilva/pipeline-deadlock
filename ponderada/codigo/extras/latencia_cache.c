@@ -26,6 +26,8 @@ struct no {
     char preenchimento[LINHA_BYTES - sizeof(struct no *)];
 };
 
+static struct no *volatile fim_da_lista;
+
 /*
  * agora: lê o relógio monotônico.
  *
@@ -76,6 +78,8 @@ static void monta_lista(struct no *nos, size_t n)
  * Retorno: nanossegundos por acesso.
  * Funcionamento: percorre a lista uma vez para aquecer a cache e depois mede
  * PASSOS acessos. Pede páginas enormes para reduzir o efeito das faltas de TLB.
+ * Guardar o ponteiro final em fim_da_lista impede o compilador de apagar o laço
+ * sem colocar nenhum acesso extra à memória dentro dele.
  */
 static double mede(size_t bytes)
 {
@@ -86,7 +90,7 @@ static double mede(size_t bytes)
     madvise(nos, bytes, MADV_HUGEPAGE);
     monta_lista(nos, n);
 
-    volatile struct no *p = nos;
+    struct no *p = nos;
     for (size_t i = 0; i < n; i++)
         p = p->proximo;
 
@@ -95,6 +99,7 @@ static double mede(size_t bytes)
         p = p->proximo;
     double duracao = agora() - inicio;
 
+    fim_da_lista = p;
     munmap(nos, bytes);
     return duracao / PASSOS * 1e9;
 }
