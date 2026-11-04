@@ -1,0 +1,16 @@
+# Binários gerados pelo Makefile
+ponderada/codigo/versao1
+ponderada/codigo/versao2
+ponderada/codigo/versao3
+ponderada/codigo/*_tsan
+ponderada/codigo/extras/bin/
+
+# Python
+__pycache__/
+*.pyc
+.venv/
+
+# Editor e sistema
+.vscode/
+.idea/
+.DS_Store
