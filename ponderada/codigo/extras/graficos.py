@@ -21,6 +21,8 @@ matplotlib.use("Agg")
 import matplotlib.pyplot as plt
 from matplotlib.patches import Circle, FancyArrowPatch, FancyBboxPatch, Rectangle
 
+from pipeline import ESTAGIOS, TRECHO, bolhas, simula, total_ciclos
+
 SUPERFICIE = "#fcfcfb"
 TINTA = "#0b0b0b"
 TINTA_2 = "#52514e"
@@ -276,6 +278,80 @@ def grafico_campanha():
     plt.close(figura)
 
 
+def diagrama_pipeline(ordem, forwarding, titulo, arquivo):
+    """
+    Desenha um diagrama de pipeline ciclo a ciclo.
+
+    Parâmetros:
+        ordem (sequence[Instrucao]): instruções na ordem de execução.
+        forwarding (bool): True liga o adiantamento de resultados.
+        titulo (str): título da figura.
+        arquivo (str): nome do PNG em img/.
+    Retorno:
+        None.
+    Funcionamento:
+        Usa os ciclos calculados por simula(), de pipeline.py. Os três
+        diagramas têm a escala de 17 ciclos, para que a redução apareça no
+        próprio desenho. Os ciclos parados ficam em laranja.
+    """
+    ciclos = simula(ordem, forwarding)
+    figura, eixos = plt.subplots(figsize=(8.6, 3.6), dpi=160)
+    figura.subplots_adjust(left=0.015, right=0.985, top=0.9, bottom=0.01)
+    figura.text(0.02, 0.965, titulo, fontsize=13, fontweight="bold", color=TINTA, va="top")
+    eixos.set_xlim(-5.2, 17.1)
+    eixos.set_ylim(len(ordem) + 0.05, -1.0)
+    eixos.axis("off")
+
+    for ciclo in range(1, 18):
+        eixos.text(ciclo - 0.5, -0.42, str(ciclo), ha="center", va="center", fontsize=9.5, color=TINTA_2)
+
+    for linha, instrucao in enumerate(ordem):
+        rotulo = f"I{TRECHO.index(instrucao) + 1}  {instrucao.texto}"
+        eixos.text(-5.15, linha + 0.5, rotulo, va="center", fontsize=9.5, color=TINTA, family="monospace")
+        inicio = 1 if linha == 0 else ciclos[linha - 1]["IF"] + 1
+        for estagio in ESTAGIOS:
+            fim = ciclos[linha][estagio]
+            for ciclo in range(inicio, fim + 1):
+                parado = ciclo != fim
+                eixos.add_patch(FancyBboxPatch(
+                    (ciclo - 1 + 0.05, linha + 0.07), 0.9, 0.86,
+                    boxstyle="round,pad=0,rounding_size=0.12",
+                    facecolor=LARANJA if parado else "#e7effa", edgecolor="none", zorder=2,
+                ))
+                eixos.text(ciclo - 0.5, linha + 0.5, estagio, ha="center", va="center", fontsize=9,
+                           color="#ffffff" if parado else TINTA, zorder=3)
+            inicio = fim + 1
+
+    figura.savefig(IMAGENS / arquivo)
+    plt.close(figura)
+
+
+def diagramas_a2():
+    """
+    Gera os três diagramas da questão A2.
+
+    Parâmetros:
+        Nenhum.
+    Retorno:
+        None.
+    Funcionamento:
+        A ordem sem bolhas é a do enunciado com I2 e I3 trocadas.
+    """
+    reordenado = (TRECHO[0], TRECHO[2], TRECHO[1], TRECHO[3], TRECHO[4], TRECHO[5], TRECHO[6])
+    casos = (
+        (TRECHO, False, "a2_sem_forwarding.png"),
+        (TRECHO, True, "a2_com_forwarding.png"),
+        (reordenado, True, "a2_reordenado.png"),
+    )
+    for ordem, forwarding, arquivo in casos:
+        ciclos = simula(ordem, forwarding)
+        nome = "Com forwarding" if forwarding else "Sem forwarding"
+        if ordem is reordenado:
+            nome = "Com forwarding e reordenado"
+        titulo = f"{nome}: {total_ciclos(ciclos)} ciclos, {bolhas(ciclos)} bolhas"
+        diagrama_pipeline(ordem, forwarding, titulo, arquivo)
+
+
 def seta(eixos, origem, destino, cor=TINTA_2, largura=1.6, curva=0.0):
     """
     Desenha uma seta entre dois pontos.
@@ -488,6 +564,7 @@ def main():
     grafico_limites()
     grafico_cache()
     grafico_campanha()
+    diagramas_a2()
     diagrama_estados()
     grafo_deadlock()
 

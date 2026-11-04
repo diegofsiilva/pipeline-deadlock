@@ -141,14 +141,15 @@ def diagrama(ordem, ciclos):
         ordem (sequence[Instrucao]): instruções na ordem de execução.
         ciclos (list[dict]): resultado de simula().
     Retorno:
-        str: tabela Markdown; IF* e ID* são ciclos parados.
+        str: tabela Markdown, com as instruções numeradas de I1 a I7 na ordem
+        original; IF* e ID* são ciclos parados.
     Funcionamento:
         Uma instrução só entra em IF quando a anterior sai de IF. Depois,
         preenche cada célula do início ao fim de cada estágio. Quando um
         estágio dura mais de um ciclo, os ciclos extras recebem asterisco.
     """
     total = total_ciclos(ciclos)
-    cabecalho = "| Instrução | " + " | ".join(str(c) for c in range(1, total + 1)) + " |"
+    cabecalho = "| | " + " | ".join(str(c) for c in range(1, total + 1)) + " |"
     separador = "|---|" + "---|" * total
     linhas = [cabecalho, separador]
     for i, instrucao in enumerate(ordem):
@@ -159,7 +160,8 @@ def diagrama(ordem, ciclos):
             for ciclo in range(inicio, fim + 1):
                 celulas[ciclo] = estagio if ciclo == fim else estagio + "\\*"
             inicio = fim + 1
-        linhas.append(f"| `{instrucao.texto}` | " + " | ".join(celulas[1:]) + " |")
+        rotulo = f"I{TRECHO.index(instrucao) + 1}"
+        linhas.append(f"| {rotulo} | " + " | ".join(celulas[1:]) + " |")
     return "\n".join(linhas)
 
 
