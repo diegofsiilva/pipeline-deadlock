@@ -120,6 +120,17 @@ def conta_execucoes(programas, iniciais):
 
     @lru_cache(maxsize=None)
     def conta(estado):
+        """
+        Conta as execuções que partem de um estado.
+
+        Parâmetros:
+            estado (tuple): posição das threads e valor dos semáforos.
+        Retorno:
+            tuple: (execuções que terminam, execuções que travam).
+        Funcionamento:
+            Sem saídas, a execução acabou: terminou se todas as threads
+            chegaram ao fim e, caso contrário, travou.
+        """
         saidas = proximos(estado, programas, nomes, False)
         if not saidas:
             terminou = all(p == len(q) for p, q in zip(estado[0], programas))
@@ -131,12 +142,30 @@ def conta_execucoes(programas, iniciais):
 
 
 def down(semaforo):
-    """Atalho para escrever a operação DOWN (P) de um semáforo."""
+    """
+    Escreve a operação DOWN (P) de um semáforo.
+
+    Parâmetros:
+        semaforo (str): nome do semáforo.
+    Retorno:
+        tuple: a operação, no formato usado pelos programas do modelo.
+    Funcionamento:
+        É só um atalho para os modelos ficarem parecidos com o código.
+    """
     return ("DOWN", semaforo)
 
 
 def up(semaforo):
-    """Atalho para escrever a operação UP (V) de um semáforo."""
+    """
+    Escreve a operação UP (V) de um semáforo.
+
+    Parâmetros:
+        semaforo (str): nome do semáforo.
+    Retorno:
+        tuple: a operação, no formato usado pelos programas do modelo.
+    Funcionamento:
+        É só um atalho para os modelos ficarem parecidos com o código.
+    """
     return ("UP", semaforo)
 
 
