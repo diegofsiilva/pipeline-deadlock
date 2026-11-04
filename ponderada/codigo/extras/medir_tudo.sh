@@ -70,6 +70,8 @@ campanha() {
 make -s versao1 versao2 versao3 versao1_tsan versao2_tsan extras
 rm -f "$SAIDA"/jitter.txt "$SAIDA"/campanha.tsv
 
+{ lscpu | grep -E '^Nome do modelo|^cache de'; echo; lscpu -C; } > "$SAIDA/lscpu.txt"
+
 echo "custos"
 taskset -c "$NUCLEO" extras/bin/custos > "$SAIDA/custos.txt"
 

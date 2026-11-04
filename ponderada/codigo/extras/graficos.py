@@ -11,6 +11,7 @@ Uso, a partir de ponderada/codigo: python3 extras/graficos.py
 import csv
 import math
 import random
+import statistics
 from pathlib import Path
 
 import matplotlib
@@ -185,7 +186,8 @@ def grafico_cache():
         pontos = [(int(a), float(b)) for a, b in csv.reader(arquivo, delimiter="\t")]
     tamanhos = [p[0] for p in pontos]
     latencias = [p[1] for p in pontos]
-    razao = latencias[-1] / min(latencias)
+    l1 = statistics.median(p[1] for p in pontos if p[0] <= 48)
+    razao = latencias[-1] / l1
 
     figura, eixos = plt.subplots(figsize=(8.6, 4.2), dpi=160)
     figura.subplots_adjust(left=0.08, right=0.97, top=0.76, bottom=0.14)
@@ -237,7 +239,7 @@ def grafico_campanha():
     ]
     sorteio = random.Random(2026)
     figura, eixos = plt.subplots(figsize=(8.6, 4.2), dpi=160)
-    figura.subplots_adjust(left=0.215, right=0.97, top=0.71, bottom=0.14)
+    figura.subplots_adjust(left=0.265, right=0.97, top=0.71, bottom=0.14)
     titulos(figura, "A versão 1 muda a cada execução; as outras não",
             "Amostras perdidas de 20.000. Cada ponto é uma execução")
 
