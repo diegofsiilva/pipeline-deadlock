@@ -16,7 +16,7 @@ Uma ideia guia este trabalho: **5 ms é uma promessa sobre o pior caso, não sob
 2. No pior caso, o chip de 48 MHz com DSP aguenta mais instruções que o de 1,2 GHz, por pouco mais da metade do preço (A1).
 3. No ritmo real da pulseira, a versão com deadlock passa 200 s de teste. Uma pausa de 50 ms do motor a congela para sempre (A4).
 4. A correção de livro para o deadlock, a ordem global, resolveria o travamento, mas faria o sensor perder o prazo (A5).
-5. O argumento da parceira não resiste à medida: processo separado custa 0,1 µs a mais que thread (Parte B).
+5. O argumento da parceira não resiste à medida: processo separado, em prioridade mínima, custa 1,4 µs a mais que thread no p99 (Parte B).
 
 Contas e diagramas foram conferidos por programa (`codigo/extras/`). Onde escrevo "medido", o número veio do meu notebook, um i5-1345U com Linux 7.0, e não do hardware da pulseira. As saídas cruas estão em `codigo/resultados/`, e `bash extras/medir_tudo.sh` repete tudo. Os prints são essas saídas reais, convertidas em imagem.
 
@@ -67,8 +67,8 @@ T novo = 3,125 ms ÷ 1,923 = 1,625 ms
 
 ### 4. Por que a V precisa de cache e a H não?
 
-Na V, instruções e dados disputam o mesmo caminho até uma DRAM de 120 ciclos: é o gargalo de Von Neumann.  
-Sem cache, com 1,3 acessos por instrução, o CPI seria 1 + 1,3 × 120 = 157 e a amostra levaria 13,08 ms.  
+Na V, instruções e dados disputam o caminho até uma DRAM de 120 ciclos: o gargalo de Von Neumann.  
+Sem cache, o CPI seria 1 + 1,3 × 120 = 157, e a amostra levaria 13,08 ms.  
 A cache guarda perto do processador o que foi usado há pouco e derruba o CPI para 9,58.  
 Na H, a SRAM interna responde em 1 ciclo a 48 MHz, no ritmo do processador.  
 E a arquitetura Harvard separa instruções e dados. Não existe espera para esconder.
@@ -123,7 +123,11 @@ A folga de 1,202 ms depende de esse atraso nunca passar de 3 ms. Testei a premis
 
 Com a máquina cheia, o Linux comum atrasou a tarefa em 8,13 ms, 2,7 vezes o teto do enunciado, e 79 despertares passaram de 3 ms. Meu notebook não é a pulseira, e um kernel de tempo real deve se sair melhor. Ainda assim, a medida mostra o que "até 3 ms" exige: alguém precisa garantir esse limite por configuração e prová-lo no hardware. Na H, esse trabalho não existe.
 
-A segunda linha da tabela também pesa. Só de dividir o processador com um processo de mesma prioridade, o atraso típico subiu de 54 para 629 µs, e em um teste curto chegou a 939 µs. Com o concorrente em `SCHED_IDLE`, que só roda quando sobra tempo, ele voltou para 54 µs. Essa é a origem da regra de prioridade da A3 e da Parte B.
+A segunda linha da tabela também pesa. Só de dividir o processador com um processo de mesma prioridade, o atraso típico subiu de 57 para 629 µs. Com o concorrente em `SCHED_IDLE`, que só roda quando sobra tempo, ele caiu para 54 µs. Essa é a origem da regra de prioridade da A3 e da Parte B.
+
+### Minha escolha
+
+Se o único critério fosse o prazo, eu escolheria **H + DSP**: é a única opção que cumpre os 5 ms com o buffer cheio, não depende de uma garantia do Linux e custa pouco mais da metade da V. A A3 segue na V porque o enunciado a coloca lá, e a Parte B, porque isolar o módulo do parceiro exige processos separados, e a H não tem sistema operacional.
 
 ## A2. Pipeline: o loop do filtro
 
@@ -224,7 +228,7 @@ Medi os custos com o método do slide "Quanto custa, medido" (mediana de 5 execu
 
 Criar uma thread é 5,8 vezes mais barato, mas a pulseira cria tudo uma vez só. O que se repete é a troca, e a diferença é de 0,07 µs: **0,0014% do orçamento de 5 ms**. Mesmo com um chip quatro vezes mais lento, a conclusão não muda. Quem decide essa arquitetura é o isolamento, não o custo.
 
-Duas regras completam a separação. O núcleo nunca espera pelo BLE: se o canal encher, o log se perde e a vibração continua. E o núcleo roda com prioridade maior, porque, como medi na A1, dividir o processador com um processo de mesma prioridade sobe o atraso típico de 54 para 629 µs.
+Duas regras completam a separação. O núcleo nunca espera pelo BLE: se o canal encher, o log se perde e a vibração continua. E o núcleo roda com prioridade maior, porque, como medi na A1, dividir o processador com um processo de mesma prioridade sobe o atraso típico de 57 para 629 µs.
 
 ### 2. E se alguém explorar o BLE?
 
@@ -340,7 +344,7 @@ Repeti cada versão muitas vezes, em vários núcleos e presa a um só:
 
 A versão 2 nunca errou e a versão 3 nunca escapou. O problema é a versão 1: em vários núcleos, nenhuma das 200 execuções saiu certa, e as perdas foram de 1.398 a 13.238.
 
-Presa a um núcleo, como em uma pulseira com um processador só, ela erra bem menos: 11 das 20 execuções saíram perfeitas. Com essa taxa, três execuções limpas seguidas acontecem em uma de cada seis tentativas, e foi o que aconteceu comigo. Minhas três primeiras nesse cenário não mostraram erro nenhum, e eu quase escrevi que o código funcionava em um núcleo. É a armadilha do slide, "o teste passou, então não tem condição de corrida". A corrida continua lá, só ficou mais rara.
+Presa a um núcleo, como em uma pulseira com um processador só, ela erra bem menos: 11 das 20 execuções saíram perfeitas. Com essa taxa, três execuções limpas seguidas acontecem em uma de cada seis tentativas. Nesse caso, as três execuções pedidas pelo enunciado levariam à conclusão de que o código funciona em um núcleo. É a armadilha do slide, "o teste passou, então não tem condição de corrida". A corrida continua lá, só ficou mais rara.
 
 O núcleo único cobra outra conta. Quem gira na espera ocupada gasta o tempo de quem tem trabalho a fazer: a versão 1 levou 29,7 s, contra 0,033 s da versão 2, mais de 900 vezes mais. São 1,5 ms por amostra, 30% do orçamento de 5 ms, gastos em um laço vazio.
 
@@ -354,7 +358,7 @@ O núcleo único cobra outra conta. Quem gira na espera ocupada gasta o tempo de
 
 Testes mostram que a versão 2 funcionou. Para mostrar que ela não pode travar, o `verificador.py` percorreu todos os estados alcançáveis: **38 estados e nenhum deadlock**, em qualquer intercalação. O mesmo vale para os outros tamanhos que testei, até N = 64.
 
-Um detalhe que encontrei ao testar: com **um** produtor e **um** consumidor, `vazio` e `cheio` já mantêm as duas threads em posições diferentes. Tirei o `mutex` de uma cópia da versão 2 e, em 200 execuções e no ThreadSanitizer, não houve nenhum erro. Com duas threads de um mesmo lado, ele volta a ser indispensável, porque elas dividiriam o índice. Neste caso, o semáforo que causa o deadlock da versão 3 poderia nem existir.
+Um detalhe que encontrei ao testar: com **um** produtor e **um** consumidor, `vazio` e `cheio` já mantêm as duas threads em posições diferentes. Tirei o `mutex` de uma cópia da versão 2 e, em 200 execuções e no ThreadSanitizer, não houve nenhum erro (`resultados/sem_mutex.txt`). Com duas threads de um mesmo lado, ele volta a ser indispensável, porque elas dividiriam o índice. Neste caso, o semáforo que causa o deadlock da versão 3 poderia nem existir.
 
 ### Versão 3: o que aconteceu
 
@@ -444,7 +448,7 @@ thread_sensor:        thread_log:           thread_config:
   V(log)                V(ble)                V(i2c)
 ```
 
-O verificador confirma: 52 estados alcançáveis e 0 deadlocks. **Para quem usa, nada muda**, e isso é o melhor resultado possível. Ainda há um ganho: o sensor deixa de depender do log para soltar o barramento.
+O verificador confirma: 52 estados alcançáveis e 0 deadlocks. **Para quem usa, nada muda**, e isso é o melhor resultado possível. Ainda há um ganho: o sensor deixa de depender do log para soltar o barramento. A correção também combina com a A3: com o BLE em outro processo, o comando chega por mensagem, e é uma thread do núcleo que pega o `i2c`, sem segurar o rádio.
 
 A correção de livro seria a ordem global (`i2c`, depois `log`, depois `ble`). Ela também zera os deadlocks (24 estados, 0 deadlocks), mas eu não a usaria aqui. Ela obriga `thread_config` a pegar o I2C **antes** do rádio, e o sensor ficaria parado durante todo o `recebe_comando()`. Na especificação tradicional do BLE, o intervalo de conexão é de [no mínimo 7,5 ms](https://www.novelbits.io/ble-connection-intervals/), mais que os 5 ms do prazo. Eu trocaria um travamento raro por um atraso a cada comando recebido.
 
@@ -461,11 +465,11 @@ As duas se completam: a prevenção remove o defeito conhecido, e o watchdog pro
 **Memorando ao conselho da Tato. Dilema 3: o parceiro grande.**
 De: Diego Figueiredo Silva, CTO
 
-**Decisão: o módulo do parceiro só entra como processo separado, mesmo com o risco de perdermos o acordo.** Código fechado rodando como thread no nosso processo não vai para a pulseira.
+**Decisão: o módulo do parceiro só entra como processo separado, mesmo com o risco de perdermos o acordo.**
 
-**Do que abrimos mão.** Podemos perder a distribuição para 50 mil usuários, 25 vezes o lote do edital. Quem paga é a empresa, em receita e velocidade, e as pessoas que ficariam sem a pulseira se o acordo cair. O time também assume construir e manter a interface entre os processos.
+**Do que abrimos mão.** Podemos perder a distribuição para 50 mil usuários. Quem paga é a empresa, em receita e velocidade, e as pessoas que ficariam sem a pulseira se o acordo cair. O time também assume construir e manter a interface entre os processos.
 
-**O número que pesou.** Na Plataforma V, meu pior caso é 3,80 ms: sobram **1,20 ms** dos 5 ms. A parceira diz que a comunicação entre processos gasta essa folga. Medi no meu notebook: a amostra chega a uma thread em 1,1 µs e a um processo em 1,2 µs (medianas de 50 mil mensagens). São 0,1 µs a mais, menos de 0,01% da folga, e menos de 0,1% mesmo em um chip dez vezes mais lento. Isso vale para a nossa contraproposta: um processo separado que lê as amostras em memória compartilhada somente leitura. A parceira fica com a latência de thread, e a MMU garante que ela não escreve.
+**O número que pesou.** Na Plataforma V, meu pior caso é 3,80 ms: sobram **1,20 ms** dos 5 ms. A parceira diz que a comunicação entre processos gasta essa folga. Medi a nossa contraproposta no meu notebook: um processo separado, em prioridade mínima, que lê as amostras em memória compartilhada somente leitura (50 mil mensagens, com o núcleo dormindo após publicar). No p99, a amostra chega a uma thread em 15,7 µs e a esse processo em 17,1 µs. São 1,4 µs a mais, 0,12% da folga, e cerca de 1% mesmo em um chip dez vezes mais lento. No maior atraso medido, a thread até perdeu: 550 µs contra 318 µs. A parceira fica praticamente com a latência de thread, e a MMU garante que ela não escreve.
 
 **Por que thread não.** Com código fechado dentro do processo, o pior caso da pulseira passa a ser escrito por outra empresa, e eu deixo de poder assinar os 5 ms. Injetei três falhas em um módulo simulado, com um obstáculo a 0,8 m:
 
@@ -475,7 +479,7 @@ De: Diego Figueiredo Silva, CTO
 | Escreve na amostra | 200 avisos falsos de caminho livre, sem nenhum erro | Escrita barrada, 300 de 300 |
 | Segura a trava do buffer | Congela: 100 de 300 | 300 de 300 |
 
-**Impacto e segurança.** Para quem usa, o aviso de navegação chega no mesmo tempo. Se o módulo falhar, a pessoa perde a navegação, nunca a vibração. O risco que fica é o canal entre os processos, que vira superfície de ataque, e o próprio Linux, porque processo separado não protege contra falha no kernel. Isolar a memória também não basta: dividir o núcleo com um processo de mesma prioridade subiu o atraso típico de 54 para 629 µs, 52% da folga. Por isso o módulo roda com prioridade mínima e sem acesso ao I2C e ao motor.
+**Impacto e segurança.** Para quem usa, o aviso de navegação chega praticamente no mesmo tempo. Se o módulo falhar, a pessoa perde a navegação, nunca a vibração. O risco que fica é o canal entre os processos, que vira superfície de ataque, e o próprio Linux, porque processo separado não protege contra falha no kernel. Isolar a memória não basta: um processo de mesma prioridade no núcleo subiu o atraso típico de 57 para 629 µs, 52% da folga. Por isso o módulo roda com prioridade mínima e sem acesso ao I2C e ao motor.
 
 **O que me faria mudar de ideia.** Aceito thread só se duas coisas acontecerem juntas: a parceira abrir o código para auditoria e, medido na pulseira real, o canal custar mais de 600 µs no pior caso, metade da folga. E há um limite que vale nos dois modelos: se o módulo levar a taxa de falta da L1 acima de 14,74%, ele não entra, porque o prazo deixa de fechar.
 
