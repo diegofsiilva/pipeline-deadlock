@@ -67,6 +67,27 @@ campanha() {
     done
 }
 
+# sem_mutex: testa a versão 2 sem as operações no mutex.
+# Parâmetros: nenhum.
+# Retorno: nada; grava o resumo em resultados/sem_mutex.txt.
+# Funcionamento: gera a cópia sem o mutex em extras/bin, roda 200 vezes e passa
+# uma vez no ThreadSanitizer.
+sem_mutex() {
+    grep -vE 'sem_(wait|post)\(&mutex\)' versao2.c > extras/bin/sem_mutex.c
+    gcc -O2 -g -pthread -I. -o extras/bin/sem_mutex extras/bin/sem_mutex.c
+    gcc -O1 -g -pthread -fsanitize=thread -I. -o extras/bin/sem_mutex_tsan extras/bin/sem_mutex.c
+    {
+        echo "versão 2 sem mutex, 200 execuções"
+        for _ in $(seq 200); do
+            extras/bin/sem_mutex
+        done | awk '
+            /perdidas/ { l += $3 } /duplicadas/ { d += $3 } /travou/ { if ($3 == "sim") t++ }
+            END { printf "perdidas: %d\nduplicadas: %d\ntravaram: %d\n", l, d, t }'
+        echo "avisos do ThreadSanitizer: $(TSAN_OPTIONS=report_thread_leaks=0 \
+            extras/bin/sem_mutex_tsan 2>&1 | grep -c 'WARNING: ThreadSanitizer')"
+    } > "$SAIDA/sem_mutex.txt"
+}
+
 make -s versao1 versao2 versao3 versao1_tsan versao2_tsan extras
 rm -f "$SAIDA"/jitter.txt "$SAIDA"/campanha.tsv
 
@@ -99,6 +120,7 @@ done > "$SAIDA/execucoes.txt"
 echo "ferramentas"
 make --no-print-directory tsan1 > "$SAIDA/tsan_v1.txt" 2>&1
 make --no-print-directory tsan2 > "$SAIDA/tsan_v2.txt" 2>&1
+sem_mutex
 gdb -q -batch -ex 'set pagination off' -ex 'set debuginfod enabled off' \
     -ex 'break relatorio' -ex run -ex 'thread apply all bt' ./versao3 > "$SAIDA/gdb_v3.txt" 2>&1
 

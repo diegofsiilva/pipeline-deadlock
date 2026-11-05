@@ -5,8 +5,9 @@
  * medida, usando um módulo de parceiro simulado:
  *
  *   parceiro latencia: quanto tempo uma amostra leva para chegar ao módulo,
- *   como thread, como processo com memória somente leitura e como processo
- *   com pipe. Rode com taskset, para as duas pontas dividirem um núcleo.
+ *   como thread, como processo com memória somente leitura, em prioridade
+ *   normal e mínima, e como processo com pipe. Rode com taskset, para as duas
+ *   pontas dividirem um núcleo.
  *
  *   parceiro falhas: injeta três falhas no módulo, como thread e como processo,
  *   e conta o que acontece com o laço de 100 Hz que aciona o motor.
@@ -32,6 +33,7 @@
 #include <sys/mman.h>
 #include <sys/wait.h>
 #include <pthread.h>
+#include <sched.h>
 #include <time.h>
 #include <unistd.h>
 
@@ -491,11 +493,13 @@ static void latencia_thread(double *latencias)
  *
  * Parâmetros:
  *   latencias: vetor de resultado, em memória compartilhada.
+ *   prioridade_minima: true para o módulo rodar em SCHED_IDLE.
  * Retorno: nenhum.
  * Funcionamento: processo separado, lendo a amostra por um mapeamento somente
- * leitura e acordando por um semáforo que o núcleo só incrementa.
+ * leitura e acordando por um semáforo que o núcleo só incrementa. Em SCHED_IDLE,
+ * o módulo só roda quando o núcleo dorme, como o memorando propõe.
  */
-static void latencia_memoria(double *latencias)
+static void latencia_memoria(double *latencias, bool prioridade_minima)
 {
     int fd;
     struct leitora l = {cria_area_selada(&fd), compartilhada(sizeof(struct controle)), latencias};
@@ -503,6 +507,10 @@ static void latencia_memoria(double *latencias)
     sem_init(&l.controle->aviso, 1, 0);
     pid_t pid = fork();
     if (pid == 0) {
+        struct sched_param prioridade = {0};
+
+        if (prioridade_minima && sched_setscheduler(0, SCHED_IDLE, &prioridade) != 0)
+            _exit(1);
         l.amostra = mapeia_somente_leitura(l.amostra, fd);
         le_com_aviso(&l);
         _exit(0);
@@ -546,7 +554,7 @@ static void latencia_pipe(double *latencias)
 }
 
 /*
- * mede_latencias: executa os três arranjos.
+ * mede_latencias: executa os quatro arranjos.
  *
  * Parâmetros: nenhum.
  * Retorno: nenhum.
@@ -559,8 +567,10 @@ static void mede_latencias(void)
     printf("  mediana       p99    máximo   arranjo (microssegundos)\n");
     latencia_thread(latencias);
     imprime_latencias("thread, memória direta", latencias);
-    latencia_memoria(latencias);
+    latencia_memoria(latencias, false);
     imprime_latencias("processo, memória só de leitura", latencias);
+    latencia_memoria(latencias, true);
+    imprime_latencias("processo, memória só de leitura, SCHED_IDLE", latencias);
     latencia_pipe(latencias);
     imprime_latencias("processo, pipe", latencias);
 }

@@ -11,7 +11,7 @@ Programas que conferem as contas e medem o que o `ponderada-tato.md` afirma. Nen
 | `jitter.c` | Mede o atraso de uma tarefa de 100 Hz, para testar os "até 3 ms" do Linux. | A1, A3, B |
 | `latencia_cache.c` | Mede o tempo de acesso em cada nível de memória. | A1 |
 | `ritmo.c` | Roda as versões 2 e 3 a 100 Hz, com uma pausa opcional do motor. | A4 |
-| `parceiro.c` | Mede a latência até o módulo do parceiro e injeta falhas nele. | B |
+| `parceiro.c` | Mede a latência até o módulo do parceiro, em prioridade normal e mínima, e injeta falhas nele. | B |
 | `medir_tudo.sh` | Repete todas as medições e grava em `resultados/`. Leva cerca de 20 minutos. | todas |
 | `print_terminal.py` | Gera os prints a partir das saídas reais em `resultados/`. | A1, A4 |
 | `graficos.py` | Gera os gráficos e diagramas. Precisa de matplotlib. | A1, A3, A4, A5 |

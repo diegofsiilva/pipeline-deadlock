@@ -1,0 +1,5 @@
+versão 2 sem mutex, 200 execuções
+perdidas: 0
+duplicadas: 0
+travaram: 0
+avisos do ThreadSanitizer: 0
